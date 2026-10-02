@@ -5,7 +5,7 @@ from utils.awkward_array_utilities import as_type
 import analysis_configs.triggers as trg
 import utils.variables_computation.event_variables as event_vars
 #from analysis_configs.met_filters import met_filters_nanoaod as met_filters
-from analysis_configs import scouting_run3_photon_enriched_pre_selection as sequences
+from analysis_configs import sequences_photons_enriched_scouting_run3 as sequences
 
 
 GOLDEN_JSON_PATHS = {
@@ -14,15 +14,15 @@ GOLDEN_JSON_PATHS = {
 
 
 def process(events, cut_flow, year, primary_dataset="", dataset_name="", pn_tagger=False, **kwargs):
-    """SVJ s-channel scouting pre-selection."""
+    """Draft of scouting Run3 photon enriched pre-selection (dummy version)."""
 
     # Golden JSON lumi mask (data only)
-    if skimmer_utils.is_data(events) and len(events) != 0:
-        from coffea.lumi_tools import LumiMask
-        lumi_mask = LumiMask(GOLDEN_JSON_PATHS[year])
-        mask = lumi_mask(events.run, events.lumSec)
-        events = events[mask]
-        skimmer_utils.update_cut_flow(cut_flow, "GoldenJSON", events)
+    #if skimmer_utils.is_data(events) and len(events) != 0:
+    #    from coffea.lumi_tools import LumiMask
+    #    lumi_mask = LumiMask(GOLDEN_JSON_PATHS[year])
+    #    mask = lumi_mask(events.run, events.lumSec)
+    #    events = events[mask]
+    #    skimmer_utils.update_cut_flow(cut_flow, "GoldenJSON", events)
 
 
     # Trigger event selection
@@ -31,12 +31,12 @@ def process(events, cut_flow, year, primary_dataset="", dataset_name="", pn_tagg
     #skimmer_utils.update_cut_flow(cut_flow, "Trigger", events)
 
     # Good fat jet filters
-    if ak.count(events.ScoutingFatPFJetRecluster) != 0:
+    if ak.count(events.ScoutingFatPFJetRecluster_pt) != 0:
         events = sequences.apply_good_ak8_jet_filter(events)
     skimmer_utils.update_cut_flow(cut_flow, "GoodJetsAK8", events)
 
     # Removing events with no jets to avoid crashes
-    filter_njets = ak.count(events.ScoutingFatPFJetRecluster, axis=1) > 0
+    filter_njets = ak.count(events.ScoutingFatPFJetRecluster_pt, axis=1) > 0
     events = events[filter_njets]
     skimmer_utils.update_cut_flow(cut_flow, "nJetsAK8Gt0", events)
     
@@ -50,7 +50,7 @@ def process(events, cut_flow, year, primary_dataset="", dataset_name="", pn_tagg
 
     # Requiring at least 2 FatJets. No good jets requirements based on id
     if len(events) != 0:
-        filter = ak.count(events.ScoutingFatPFJetRecluster[events.ScoutingFatPFJetRecluster_isGood], axis=1) >= 2
+        filter = ak.count(events.ScoutingFatPFJetRecluster_pt[events.ScoutingFatPFJetRecluster_isGood], axis=1) >= 2
         events = events[filter]
     skimmer_utils.update_cut_flow(cut_flow, "nJetsAK8Gt2", events)
 
