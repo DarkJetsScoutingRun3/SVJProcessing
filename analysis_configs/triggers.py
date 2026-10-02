@@ -126,3 +126,7 @@ jetht_2018 = [
 s_channel_scouting = [
     "scouting_trig"
 ]
+
+scouting_run3_photon_enriched = [
+    "DST_PFScouting_JetHT",
+]
