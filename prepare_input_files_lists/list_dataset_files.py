@@ -154,7 +154,7 @@ def __write_dataset_info(
     with open(output_file_name, "w") as output_file:
         writer = csv.writer(output_file)
         writer.writerow(header)
-        for file_name, n_events in zip(files_list, number_of_events):
+        for file_name, n_events in zip(files_list_, number_of_events):
             writer.writerow([file_name, n_events])
 
     log.info(f"{output_file_name} was written.")
