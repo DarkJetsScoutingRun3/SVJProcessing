@@ -3,6 +3,8 @@ import csv
 from importlib import import_module
 from pathlib import Path
 from functools import partial
+from tqdm import tqdm
+from logging import log
 
 import uproot
 
@@ -126,9 +128,23 @@ def __write_dataset_info(
     else:
         tree_name = "TreeMaker2/PreSelection"
 
+    #check if tree_name exists in each file, if not remove the file from the list, use tqdm to show progress bar
+    files_list_ = []
+    for file_name in tqdm(files_list, desc="Checking files"):
+        try:
+            file_ = uproot.open(file_name)
+            # keys without cycle numbers, e.g. 'mmtree', 'mmtree/Events'
+            keys = file_.keys(cycle=False)
+            if tree_name in keys:
+                files_list_.append(file_name)
+            else:
+                log.warning(f"Tree {tree_name} not found in file {file_name}. Skipping this file.")
+        except Exception as e:
+            log.warning(f"Error opening file {file_name}: {e}. Skipping this file.") 
+
     process_function = partial(__get_number_of_events, tree_name=tree_name)
     number_of_events = process_in_parallel(
-        files_list=files_list,
+        files_list=files_list_,
         process_function=process_function,
         n_workers=n_workers,
     )
