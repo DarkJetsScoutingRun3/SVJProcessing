@@ -30,33 +30,46 @@ def process(events, cut_flow, year, primary_dataset="", dataset_name="", pn_tagg
     #events = skimmer_utils.apply_trigger_cut(events, triggers)
     #skimmer_utils.update_cut_flow(cut_flow, "Trigger", events)
 
+    recluster=True
+
+    # If recluster is True, a new collection with the reclustered jets is created and
+    # these are the jets used for the rest of the pre-selection
+    if recluster: 
+        jet_collection = sequences.reclustered_jets_name()
+        if len(events) != 0:
+            events = sequences.add_jet_reclustering_branches(events)
+    else:
+        # AK8 jets with 170 clustering threshold (the ones in the ntuples)
+        jet_collection = "ScoutingFatPFJetRecluster"
+
+
     # Good fat jet filters
-    if ak.count(events.ScoutingFatPFJetRecluster_pt) != 0:
-        events = sequences.apply_good_ak8_jet_filter(events)
+    if ak.count(events[f"{jet_collection}_pt"]) != 0:
+        events = sequences.apply_good_ak8_jet_filter(events, jets=jet_collection)
     skimmer_utils.update_cut_flow(cut_flow, "GoodJetsAK8", events)
 
     # Removing events with no jets to avoid crashes
-    filter_njets = ak.count(events.ScoutingFatPFJetRecluster_pt, axis=1) > 0
+    filter_njets = ak.count(events[f"{jet_collection}_pt"], axis=1) > 0
     events = events[filter_njets]
     skimmer_utils.update_cut_flow(cut_flow, "nJetsAK8Gt0", events)
     
     # Adding JetsAK8_isGood branch already so that it can be used
     # in the rest of the pre-selection
     if len(events) != 0:
-        events = sequences.add_good_ak8_jet_branch(events)
+        events = sequences.add_good_ak8_jet_branch(events, jets=jet_collection)
         events = sequences.add_good_ak4_jet_branch(events)
-       #events = sequences.add_veto_leptons_branches(events)
+        #events = sequences.add_veto_leptons_branches(events)
 
 
     # Requiring at least 2 FatJets. No good jets requirements based on id
     if len(events) != 0:
-        filter = ak.count(events.ScoutingFatPFJetRecluster_pt[events.ScoutingFatPFJetRecluster_isGood], axis=1) >= 2
+        filter = ak.count(events[f"{jet_collection}_pt"][events[f"{jet_collection}_isGood"]], axis=1) >= 2
         events = events[filter]
     skimmer_utils.update_cut_flow(cut_flow, "nJetsAK8Gt2", events)
 
     if len(events) != 0:
-        events = sequences.add_analysis_branches(events)
-    
+        events = sequences.add_analysis_branches(events, jets=jet_collection)
+
     #will need to update this for gen studies using new collections (GenPart)
     #if sequences.has_dark_quark_info(events):
     #    events = sequences.add_dark_quark_matching(events)

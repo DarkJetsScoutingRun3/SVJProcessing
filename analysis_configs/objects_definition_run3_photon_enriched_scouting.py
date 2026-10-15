@@ -5,7 +5,7 @@ def is_good_ak8_jet(jets_ak8):
 
 def is_analysis_ak8_jet(jets_ak8):
     return (
-        (jets_ak8.pt > 150)
+        (jets_ak8.pt > 100) # changed for the reclustering
         & (abs(jets_ak8.eta) < 2.4)
     )
 

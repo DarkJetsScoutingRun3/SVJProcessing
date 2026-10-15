@@ -6,26 +6,32 @@ from utils.variables_computation import event_variables as event_vars
 from utils.data.triggers import primary_dataset_triggers
 from utils.tree_maker.triggers import trigger_table
 from utils.awkward_array_utilities import as_type
+from utils.reclustering import jet_constituent_features, recluster 
 # from utils.variables_computation import jet_variables as jet_vars
 # import analysis_configs.physics_objects_nano_aod as physicsObj
 from analysis_configs import objects_definition_run3_photon_enriched_scouting as obj
 
 from utils.Logger import *
 
+RECLUSTER_PT_MIN = 100.0   
 
-def apply_good_ak8_jet_filter(events):
-    
+def reclustered_jets_name(pt_min=RECLUSTER_PT_MIN):
+    """Name of the collection of the reclustered jets"""
+    return f"ScoutingFatPFJetReclusteredTh{int(pt_min)}GeV"
+
+
+def apply_good_ak8_jet_filter(events, jets="ScoutingFatPFJetRecluster"):
     # events = add_branches_for_ak8_jet_id(events) # reads variables from ntuplizer now, no need to recompute them
     #maybe we will call this once done some preliminary studies
     #events = add_ak8_jet_id_branch(events)
     
     ak8_jets = ak.zip(
         {
-            "pt": events.ScoutingFatPFJetRecluster_pt,
-            "mass": events.ScoutingFatPFJetRecluster_mass,
-            "eta": events.ScoutingFatPFJetRecluster_eta,
-            "phi": events.ScoutingFatPFJetRecluster_phi,
-            #"id": events.ScoutingFatPFJetRecluster_jetId,
+            "pt": events[f"{jets}_pt"],
+            "mass": events[f"{jets}_mass"],
+            "eta": events[f"{jets}_eta"],
+            "phi": events[f"{jets}_phi"],
+            #"id": events[f"{jets}_jetId"],
         },
         with_name="PtEtaPhiMLorentzVector",
     )
@@ -40,22 +46,22 @@ def apply_good_ak8_jet_filter(events):
     return events
 
 
-def add_ak8_jet_id_branch(events):
-    CHM = events.ScoutingFatPFJetRecluster_nCh
-    NumConst = events.ScoutingFatPFJetRecluster_nConstituents
+def add_ak8_jet_id_branch(events, jets="ScoutingFatPFJetRecluster"):
+    CHM = events[f"{jets}_nCh"]
+    NumConst = events[f"{jets}_nConstituents"]
 
-    passID = ((abs(events.ScoutingFatPFJetRecluster_eta) <= 2.6)
+    passID = ((abs(events[f"{jets}_eta"]) <= 2.6)
                    & (CHM > 0)
-                   & (events.ScoutingFatPFJetRecluster_chHEF > 0)
-                   & (events.ScoutingFatPFJetRecluster_neHEF < 0.9)
+                   & (events[f"{jets}_chHEF"] > 0)
+                   & (events[f"{jets}_neHEF"] < 0.9)
                    & (NumConst > 1)
-                   #& (events.ScoutingFatPFJetRecluster_neEmEF < 0.9)
-                   & (events.ScoutingFatPFJetRecluster_muEF < 0.8)
-                   & (events.ScoutingFatPFJetRecluster_chEmEF < 0.8))
+                   #& (events[f"{jets}_neEmEF"] < 0.9)
+                   & (events[f"{jets}_muEF"] < 0.8)
+                   & (events[f"{jets}_chEmEF"] < 0.8))
 
     passID = as_type(passID, int)
 
-    events["ScoutingFatPFJetRecluster_jetId"] = passID
+    events[f"{jets}_jetId"] = passID
 
     return events
 
@@ -173,14 +179,14 @@ def add_ak4_jet_id_branch(events):
 #    return as_type(passID, int)
 
 
-def add_good_ak8_jet_branch(events):
+def add_good_ak8_jet_branch(events, jets="ScoutingFatPFJetRecluster"):
     ak8_jets = ak.zip(
         {
-            "pt": events.ScoutingFatPFJetRecluster_pt,
-            "mass": events.ScoutingFatPFJetRecluster_mass,
-            "eta": events.ScoutingFatPFJetRecluster_eta,
-            "phi": events.ScoutingFatPFJetRecluster_phi,
-            #"id": events.ScoutingFatPFJetRecluster_jetId,
+            "pt": events[f"{jets}_pt"],
+            "mass": events[f"{jets}_mass"],
+            "eta": events[f"{jets}_eta"],
+            "phi": events[f"{jets}_phi"],
+            #"id": events[f"{jets}_jetId"],
         },
         with_name="PtEtaPhiMLorentzVector",
     )
@@ -191,7 +197,7 @@ def add_good_ak8_jet_branch(events):
     )
 
     #add new branch to the events
-    events["ScoutingFatPFJetRecluster_isGood"] = is_good_analysis_ak8_jet
+    events[f"{jets}_isGood"] = is_good_analysis_ak8_jet
 
     return events
 
@@ -353,14 +359,14 @@ def add_good_ak4_jet_branch(events):
 #
 #    return events
 
-def add_analysis_branches(events):
+def add_analysis_branches(events, jets="ScoutingFatPFJetRecluster"):
 
     # Event variables
     good_jets_ak8_lv = skimmer_utils.make_pt_eta_phi_mass_lorentz_vector(
-        pt=events.ScoutingFatPFJetRecluster_pt[events.ScoutingFatPFJetRecluster_isGood],
-        eta=events.ScoutingFatPFJetRecluster_eta[events.ScoutingFatPFJetRecluster_isGood],
-        phi=events.ScoutingFatPFJetRecluster_phi[events.ScoutingFatPFJetRecluster_isGood],
-        mass=events.ScoutingFatPFJetRecluster_mass[events.ScoutingFatPFJetRecluster_isGood],
+        pt=events[f"{jets}_pt"][events[f"{jets}_isGood"]],
+        eta=events[f"{jets}_eta"][events[f"{jets}_isGood"]],
+        phi=events[f"{jets}_phi"][events[f"{jets}_isGood"]],
+        mass=events[f"{jets}_mass"][events[f"{jets}_isGood"]],
     )
     met = skimmer_utils.make_pt_eta_phi_mass_lorentz_vector(
             pt=events.ScoutingMET_pt,
@@ -496,4 +502,34 @@ def remove_collections(events):
     #print(f"Removing the following branches from the output file: {list_branches_to_remove}")
     events = events[[key for key in events.fields if key not in list_branches_to_remove]]
     
+    return events
+
+def add_jet_reclustering_branches(events, radius=0.8, pt_min=RECLUSTER_PT_MIN):
+    """Recluster the AK8 jets from the ScoutingPFCandidates collection
+
+    Writes a new collection: reclustered_jets_name(pt_min), with pt, eta, phi, mass and the multiplicities 
+    and energy fractions recomputed from the constituents, and its PF candidate matching table.
+    """
+      
+    name = reclustered_jets_name(pt_min) #new collection name
+    candidates = {var: events[f"ScoutingPFCandidate_{var}"] for var in ("pt", "eta", "phi", "mass", "pdgId")}
+    
+    #reclustered jets calculation
+    jets, cand_idx, jet_idx = recluster(candidates["pt"], candidates["eta"], candidates["phi"], candidates["mass"],
+                                        radius=radius, pt_min=pt_min)
+
+    for var in ("pt", "eta", "phi", "mass"):
+        events[f"{name}_{var}"] = jets[var]
+
+    #adding new jet matching tables
+    events[f"{name}PFCands_jetIdx"] = jet_idx
+    events[f"{name}PFCands_pFCandsIdx"] = cand_idx
+
+    # adding jet multiplicities and energy fractions
+    features = jet_constituent_features(candidates["pt"], candidates["eta"], candidates["mass"], candidates["pdgId"],
+                                        cand_idx, jet_idx, ak.num(jets.pt))
+    for var, values in features.items():
+        events[f"{name}_{var}"] = values
+
+
     return events
